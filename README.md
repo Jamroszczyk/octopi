@@ -1,89 +1,73 @@
-# 🐙 Krakel
+# React + TypeScript + Vite
 
-Eine visuelle To-Do-App mit Node-Graph-Darstellung. Organisiere deine Aufgaben hierarchisch von oben (Hauptaufgaben) nach unten (Unteraufgaben) - wie eine interaktive Mindmap!
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## ✨ Features
+Currently, two official plugins are available:
 
-- 📊 **Visueller Node-Graph**: Tasks als Nodes mit kurvigen Verbindungen
-- 🎯 **Automatisches Layout**: Hierarchische Anordnung von oben nach unten
-- 💾 **Speichern & Laden**: Projekte als JSON-Dateien
-- 🖥️ **Desktop-App**: Native Windows-Anwendung mit Electron
-- 🎨 **Modernes UI**: Schönes Design mit TailwindCSS
-- ⚡ **Smooth Interactions**: Zoom, Pan, Drag & Drop
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## 🚀 Entwicklung
+## React Compiler
 
-### Voraussetzungen
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-- Node.js (v18+)
-- npm oder yarn
+## Expanding the ESLint configuration
 
-### Installation
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-```bash
-npm install
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-### Entwicklungsserver starten
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-**Für Browser:**
-```bash
-npm run dev
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-**Für Electron (Desktop-App):**
-```bash
-npm run electron:dev
-```
-
-## 📦 Build
-
-### Web-Build
-```bash
-npm run build
-```
-
-### Desktop-App (Windows EXE)
-```bash
-npm run electron:build
-```
-
-Die fertige `.exe` (Krakel Setup.exe) findest du dann in `dist_electron/`.
-
-## 🛠️ Tech Stack
-
-- **React** - UI Framework
-- **TypeScript** - Type Safety
-- **Vite** - Build Tool
-- **ReactFlow** - Node Graph Library
-- **TailwindCSS** - Styling
-- **Zustand** - State Management
-- **Electron** - Desktop App
-- **ELK.js** - Automatic Layout
-
-## 📝 Verwendung
-
-1. **Neue Aufgabe erstellen**: Klick auf "+ Neue Aufgabe"
-2. **Verbindungen erstellen**: Ziehe vom Rand eines Nodes zu einem anderen
-3. **Auto-Layout**: Klick auf "🎯 Auto-Layout (Vertikal)" für automatische Anordnung
-4. **Speichern**: Klick auf "💾 Projekt speichern"
-5. **Laden**: Klick auf "📂 Projekt laden"
-
-## 🎯 Roadmap
-
-- [ ] Pinned Nodes / Container unten
-- [ ] Keyboard Shortcuts
-- [ ] Markdown Notes für Nodes
-- [ ] Light/Dark Mode
-- [ ] Cloud Sync
-- [ ] Node bearbeiten (Doppelklick)
-- [ ] Farbauswahl für Nodes
-
-## 📄 Lizenz
-
-MIT
-
-## 👨‍💻 Entwickelt mit
-
-- ❤️ und viel Kaffee
-- 🤖 Cursor AI Assistant

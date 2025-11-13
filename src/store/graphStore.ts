@@ -1,144 +1,177 @@
 import { create } from 'zustand';
-import type { Node, Edge, NodeChange, EdgeChange } from 'reactflow';
-import { applyNodeChanges, applyEdgeChanges } from 'reactflow';
-import { getHierarchicalLayout } from '../utils/layoutEngine';
+import { nanoid } from 'nanoid';
+import type { Node, Edge } from 'reactflow';
+import { colors } from '../theme/colors';
 
-interface GraphState {
-  nodes: Node[];
-  edges: Edge[];
-  isAnyNodeEditing: boolean;
-  setNodes: (nodes: Node[]) => void;
-  setEdges: (edges: Edge[]) => void;
-  onNodesChange: (changes: NodeChange[]) => void;
-  onEdgesChange: (changes: EdgeChange[]) => void;
-  addNode: (node: Node) => void;
-  removeNode: (nodeId: string) => void;
-  updateNode: (nodeId: string, data: any) => void;
-  setNodeDraggable: (nodeId: string, draggable: boolean) => void;
-  setIsAnyNodeEditing: (isEditing: boolean) => void;
-  loadGraph: (data: { nodes: Node[]; edges: Edge[] }) => void;
-  resetGraph: () => void;
-  applyAutoLayout: () => Promise<void>;
+export interface TaskNode extends Node {
+  data: {
+    label: string;
+    level: 0 | 1 | 2;
+    slot: number;
+  };
 }
 
-// Initial example nodes (vertical layout)
-const initialNodes: Node[] = [
-  {
-    id: '1',
-    type: 'default',
-    data: { label: '📋 Hauptaufgabe: Krakel App' },
-    position: { x: 250, y: 50 },
-  },
-  {
-    id: '2',
-    type: 'default',
-    data: { label: '✅ ReactFlow integrieren' },
-    position: { x: 100, y: 180 },
-  },
-  {
-    id: '3',
-    type: 'default',
-    data: { label: '🎨 UI Design erstellen' },
-    position: { x: 400, y: 180 },
-  },
-  {
-    id: '4',
-    type: 'default',
-    data: { label: '💾 State Management' },
-    position: { x: 100, y: 310 },
-  },
-];
-
-const initialEdges: Edge[] = [
-  {
-    id: 'e1-2',
-    source: '1',
-    target: '2',
-    type: 'default',
-    animated: false,
-    style: { stroke: '#3b82f6', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' },
-  },
-  {
-    id: 'e1-3',
-    source: '1',
-    target: '3',
-    type: 'default',
-    animated: false,
-    style: { stroke: '#3b82f6', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' },
-  },
-  {
-    id: 'e2-4',
-    source: '2',
-    target: '4',
-    type: 'default',
-    animated: false,
-    style: { stroke: '#10b981', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' },
-  },
-];
+interface GraphState {
+  nodes: TaskNode[];
+  edges: Edge[];
+  pinnedNodeIds: string[];
+  addNode: (parentId?: string, level?: 0 | 1 | 2) => void;
+  updateNodeLabel: (nodeId: string, label: string) => void;
+  toggleNodeCompleted: (nodeId: string) => void;
+  deleteNode: (nodeId: string) => void;
+  swapNodeSlots: (nodeId: string, targetSlot: number) => void;
+  pinNode: (nodeId: string) => void;
+  unpinNode: (nodeId: string) => void;
+  saveToJSON: () => string;
+  loadFromJSON: (json: string) => void;
+  setNodes: (nodes: TaskNode[]) => void;
+  setEdges: (edges: Edge[]) => void;
+}
 
 export const useGraphStore = create<GraphState>((set, get) => ({
-  nodes: initialNodes,
-  edges: initialEdges,
-  isAnyNodeEditing: false,
+  nodes: [],
+  edges: [],
+  pinnedNodeIds: [],
+
+  addNode: (parentId, level = 0) => {
+    const nodes = get().nodes;
+    const edges = get().edges;
+    const pinnedNodeIds = get().pinnedNodeIds;
+    const nodesAtLevel = nodes.filter(n => n.data.level === level);
+    const newSlot = nodesAtLevel.length;
+    
+    // Check if parent is pinned - if so, unpin it with confirmation
+    if (parentId && pinnedNodeIds.includes(parentId)) {
+      const parentNode = nodes.find(n => n.id === parentId);
+      if (parentNode) {
+        const confirmMessage = `"${parentNode.data.label}" wird aus dem Pinboard entfernt, da es jetzt Child-Nodes hat und keine Leaf-Node mehr ist.`;
+        alert(confirmMessage);
+        set({ pinnedNodeIds: pinnedNodeIds.filter(id => id !== parentId) });
+      }
+    }
+    
+    const newNode: TaskNode = {
+      id: nanoid(),
+      type: 'editableNode',
+      position: { x: 0, y: 0 },
+      data: { label: 'New Task', level, slot: newSlot },
+    };
+
+    const newNodes = [...nodes, newNode];
+    let newEdges = [...edges];
+
+    if (parentId) {
+      newEdges.push({
+        id: nanoid(),
+        source: parentId,
+        target: newNode.id,
+        type: 'default',
+        animated: false,
+        style: {
+          stroke: colors.edge,
+          strokeWidth: 2.5,
+        },
+      });
+    }
+
+    set({ nodes: newNodes, edges: newEdges });
+  },
+
+  updateNodeLabel: (nodeId, label) => {
+    set({
+      nodes: get().nodes.map(node =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, label } }
+          : node
+      ),
+    });
+  },
+
+  toggleNodeCompleted: (nodeId) => {
+    set({
+      nodes: get().nodes.map(node =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, completed: !node.data.completed } }
+          : node
+      ),
+    });
+  },
+
+  deleteNode: (nodeId) => {
+    const nodes = get().nodes;
+    const edges = get().edges;
+
+    const findDescendants = (id: string): string[] => {
+      const children = edges.filter(e => e.source === id).map(e => e.target);
+      return [id, ...children.flatMap(findDescendants)];
+    };
+
+    const nodesToDelete = findDescendants(nodeId);
+
+    set({
+      nodes: nodes.filter(n => !nodesToDelete.includes(n.id)),
+      edges: edges.filter(e => 
+        !nodesToDelete.includes(e.source) && 
+        !nodesToDelete.includes(e.target)
+      ),
+    });
+  },
+
+  swapNodeSlots: (nodeId, targetSlot) => {
+    const nodes = get().nodes;
+    const edges = get().edges;
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const level = node.data.level;
+    const currentSlot = node.data.slot;
+    if (currentSlot === targetSlot) return;
+
+    // Only swap slots at the same level (not descendants)
+    // The layout engine will automatically reposition children relative to parents
+    const targetNode = nodes.find(
+      n => n.data.level === level && n.data.slot === targetSlot && n.id !== nodeId
+    );
+
+    const updatedNodes = nodes.map(n => {
+      if (n.id === nodeId) {
+        return { ...n, data: { ...n.data, slot: targetSlot } };
+      }
+      if (targetNode && n.id === targetNode.id) {
+        return { ...n, data: { ...n.data, slot: currentSlot } };
+      }
+      return n;
+    });
+
+    set({ nodes: updatedNodes });
+  },
+
+  pinNode: (nodeId) => {
+    const pinnedNodeIds = get().pinnedNodeIds;
+    if (!pinnedNodeIds.includes(nodeId)) {
+      set({ pinnedNodeIds: [...pinnedNodeIds, nodeId] });
+    }
+  },
+
+  unpinNode: (nodeId) => {
+    set({ pinnedNodeIds: get().pinnedNodeIds.filter(id => id !== nodeId) });
+  },
+
+  saveToJSON: () => {
+    const { nodes, edges, pinnedNodeIds } = get();
+    return JSON.stringify({ nodes, edges, pinnedNodeIds }, null, 2);
+  },
+
+  loadFromJSON: (json) => {
+    try {
+      const { nodes, edges, pinnedNodeIds = [] } = JSON.parse(json);
+      set({ nodes, edges, pinnedNodeIds });
+    } catch (error) {
+      console.error('Failed to load JSON:', error);
+    }
+  },
 
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
-  setIsAnyNodeEditing: (isEditing) => set({ isAnyNodeEditing: isEditing }),
-
-  onNodesChange: (changes) => {
-    set({
-      nodes: applyNodeChanges(changes, get().nodes),
-    });
-  },
-
-  onEdgesChange: (changes) => {
-    set({
-      edges: applyEdgeChanges(changes, get().edges),
-    });
-  },
-
-  addNode: (node) => {
-    set({ nodes: [...get().nodes, node] });
-  },
-
-  removeNode: (nodeId) => {
-    set({
-      nodes: get().nodes.filter((n) => n.id !== nodeId),
-      edges: get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
-    });
-  },
-
-  updateNode: (nodeId, data) => {
-    set({
-      nodes: get().nodes.map((node) =>
-        node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
-      ),
-    });
-  },
-
-  setNodeDraggable: (nodeId, draggable) => {
-    set({
-      nodes: get().nodes.map((node) =>
-        node.id === nodeId ? { ...node, draggable } : node
-      ),
-    });
-  },
-
-  loadGraph: (data) => {
-    set({ nodes: data.nodes, edges: data.edges });
-  },
-
-  resetGraph: () => {
-    set({ nodes: initialNodes, edges: initialEdges });
-  },
-
-  applyAutoLayout: async () => {
-    const { nodes, edges } = get();
-    const layouted = await getHierarchicalLayout(nodes, edges);
-    set({ nodes: layouted.nodes, edges: layouted.edges });
-  },
 }));
 

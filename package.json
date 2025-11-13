@@ -1,22 +1,16 @@
 {
-  "name": "krakel",
+  "name": "beetroot",
   "private": true,
-  "version": "0.1.0",
-  "description": "Visuelle To-Do-App mit Node-Graph",
-  "author": "Your Name",
-  "main": "electron/main.js",
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "electron": "electron .",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
-    "dist": "npm run electron:build"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "elkjs": "^0.11.0",
+    "nanoid": "^5.1.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "reactflow": "^11.11.4",
@@ -49,26 +43,5 @@
     "typescript-eslint": "^8.46.3",
     "vite": "^7.2.2",
     "wait-on": "^9.0.3"
-  },
-  "build": {
-    "appId": "com.krakel.app",
-    "productName": "Krakel",
-    "directories": {
-      "output": "dist_electron"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "public/octopus_logo.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
   }
 }

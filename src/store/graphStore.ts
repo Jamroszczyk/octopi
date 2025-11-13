@@ -29,9 +29,122 @@ interface GraphState {
   setEdges: (edges: Edge[]) => void;
 }
 
+// Create initial demo structure
+const createInitialGraph = () => {
+  // Root node
+  const rootNode: TaskNode = {
+    id: 'root-1',
+    type: 'editableNode',
+    position: { x: 0, y: 0 },
+    data: { label: 'Root Task', level: 0, slot: 0 },
+  };
+
+  // Child nodes (Level 1)
+  const subtask1: TaskNode = {
+    id: 'subtask-1',
+    type: 'editableNode',
+    position: { x: 0, y: 0 },
+    data: { label: 'Subtask 1', level: 1, slot: 0 },
+  };
+
+  const subtask2: TaskNode = {
+    id: 'subtask-2',
+    type: 'editableNode',
+    position: { x: 0, y: 0 },
+    data: { label: 'Subtask 2', level: 1, slot: 1 },
+  };
+
+  // Leaf nodes for Subtask 1 (Level 2)
+  const todo1_1: TaskNode = {
+    id: 'todo-1-1',
+    type: 'editableNode',
+    position: { x: 0, y: 0 },
+    data: { label: 'Todo 1', level: 2, slot: 0, completed: false },
+  };
+
+  const todo1_2: TaskNode = {
+    id: 'todo-1-2',
+    type: 'editableNode',
+    position: { x: 0, y: 0 },
+    data: { label: 'Todo 2', level: 2, slot: 1, completed: false },
+  };
+
+  // Leaf nodes for Subtask 2 (Level 2)
+  const todo2_1: TaskNode = {
+    id: 'todo-2-1',
+    type: 'editableNode',
+    position: { x: 0, y: 0 },
+    data: { label: 'Todo 1', level: 2, slot: 2, completed: false },
+  };
+
+  const todo2_2: TaskNode = {
+    id: 'todo-2-2',
+    type: 'editableNode',
+    position: { x: 0, y: 0 },
+    data: { label: 'Todo 2', level: 2, slot: 3, completed: false },
+  };
+
+  const initialNodes = [rootNode, subtask1, subtask2, todo1_1, todo1_2, todo2_1, todo2_2];
+
+  const initialEdges: Edge[] = [
+    {
+      id: 'edge-root-subtask1',
+      source: 'root-1',
+      target: 'subtask-1',
+      type: 'default',
+      animated: false,
+      style: { stroke: colors.edge, strokeWidth: 2.5 },
+    },
+    {
+      id: 'edge-root-subtask2',
+      source: 'root-1',
+      target: 'subtask-2',
+      type: 'default',
+      animated: false,
+      style: { stroke: colors.edge, strokeWidth: 2.5 },
+    },
+    {
+      id: 'edge-subtask1-todo1',
+      source: 'subtask-1',
+      target: 'todo-1-1',
+      type: 'default',
+      animated: false,
+      style: { stroke: colors.edge, strokeWidth: 2.5 },
+    },
+    {
+      id: 'edge-subtask1-todo2',
+      source: 'subtask-1',
+      target: 'todo-1-2',
+      type: 'default',
+      animated: false,
+      style: { stroke: colors.edge, strokeWidth: 2.5 },
+    },
+    {
+      id: 'edge-subtask2-todo1',
+      source: 'subtask-2',
+      target: 'todo-2-1',
+      type: 'default',
+      animated: false,
+      style: { stroke: colors.edge, strokeWidth: 2.5 },
+    },
+    {
+      id: 'edge-subtask2-todo2',
+      source: 'subtask-2',
+      target: 'todo-2-2',
+      type: 'default',
+      animated: false,
+      style: { stroke: colors.edge, strokeWidth: 2.5 },
+    },
+  ];
+
+  return { nodes: initialNodes, edges: initialEdges };
+};
+
+const { nodes: initialNodes, edges: initialEdges } = createInitialGraph();
+
 export const useGraphStore = create<GraphState>((set, get) => ({
-  nodes: [],
-  edges: [],
+  nodes: initialNodes,
+  edges: initialEdges,
   pinnedNodeIds: [],
 
   addNode: (parentId, level = 0) => {

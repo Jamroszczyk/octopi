@@ -1,13 +1,30 @@
-import { type FC } from 'react';
+import { type FC, useState, useRef, useEffect } from 'react';
 import { useGraphStore } from '../store/graphStore';
 import { colors } from '../theme/colors';
 
 const Topbar: FC = () => {
   const { addNode, saveToJSON, loadFromJSON } = useGraphStore();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isImpressumOpen, setIsImpressumOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const handleAddRootNode = () => {
     addNode(undefined, 0);
   };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMenuOpen]);
 
   const handleSave = () => {
     const json = saveToJSON();
@@ -15,9 +32,10 @@ const Topbar: FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `beetroot-graph-${Date.now()}.json`;
+    a.download = `krakel-graph-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setIsMenuOpen(false);
   };
 
   const handleLoad = () => {
@@ -36,6 +54,12 @@ const Topbar: FC = () => {
       }
     };
     input.click();
+    setIsMenuOpen(false);
+  };
+
+  const handleImpressum = () => {
+    setIsImpressumOpen(true);
+    setIsMenuOpen(false);
   };
 
   return (
@@ -99,58 +123,235 @@ const Topbar: FC = () => {
         Root Task
       </button>
 
-      {/* Right: File Operations */}
-      <div style={{ display: 'flex', gap: '8px' }}>
+      {/* Right: Burger Menu */}
+      <div style={{ position: 'relative' }} ref={menuRef}>
         <button
-          onClick={handleSave}
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
           style={{
-            padding: '8px 16px',
-            backgroundColor: colors.neutral.gray100,
-            color: colors.neutral.gray700,
+            padding: '8px',
+            backgroundColor: 'transparent',
             border: 'none',
-            borderRadius: '8px',
-            fontWeight: '500',
-            fontSize: '14px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            justifyContent: 'center',
+            borderRadius: '8px',
             transition: 'background-color 0.2s',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray200}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray100}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray100}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={colors.neutral.gray700} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
-          Save
         </button>
 
-        <button
-          onClick={handleLoad}
+        {/* Dropdown Menu */}
+        {isMenuOpen && (
+          <div style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            backgroundColor: colors.neutral.white,
+            border: `2px solid ${colors.neutral.gray200}`,
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+            minWidth: '200px',
+            overflow: 'hidden',
+            zIndex: 2000,
+          }}>
+            <button
+              onClick={handleSave}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: colors.neutral.gray800,
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray50}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              Save JSON
+            </button>
+
+            <button
+              onClick={handleLoad}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: colors.neutral.gray800,
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray50}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Load JSON
+            </button>
+
+            <div style={{ height: '1px', backgroundColor: colors.neutral.gray200, margin: '4px 0' }} />
+
+            <button
+              onClick={handleImpressum}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: colors.neutral.gray800,
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray50}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              Impressum
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Impressum Modal */}
+      {isImpressumOpen && (
+        <div 
           style={{
-            padding: '8px 16px',
-            backgroundColor: colors.neutral.gray100,
-            color: colors.neutral.gray700,
-            border: 'none',
-            borderRadius: '8px',
-            fontWeight: '500',
-            fontSize: '14px',
-            cursor: 'pointer',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            transition: 'background-color 0.2s',
+            justifyContent: 'center',
+            zIndex: 3000,
+            backdropFilter: 'blur(4px)',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray200}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray100}
+          onClick={() => setIsImpressumOpen(false)}
         >
-          <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
-          Load
-        </button>
-      </div>
+          <div 
+            style={{
+              backgroundColor: colors.neutral.white,
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setIsImpressumOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: 'none',
+                backgroundColor: colors.neutral.gray100,
+                color: colors.neutral.gray700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray200}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray100}
+            >
+              ×
+            </button>
+
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: 'bold',
+              color: colors.neutral.gray900,
+              marginBottom: '24px',
+              marginTop: 0,
+            }}>
+              Impressum
+            </h2>
+
+            <div style={{
+              fontSize: '16px',
+              lineHeight: '1.6',
+              color: colors.neutral.gray700,
+            }}>
+              <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: colors.neutral.gray900 }}>
+                Betreiber
+              </p>
+              <p style={{ margin: '0 0 16px 0' }}>
+                Consulting & Code
+              </p>
+
+              <p style={{ margin: '0 0 4px 0' }}>
+                Behringstraße
+              </p>
+              <p style={{ margin: '0 0 16px 0' }}>
+                22763 Hamburg
+              </p>
+
+              <a 
+                href="mailto:code.consult.digital@gmail.com"
+                style={{
+                  color: colors.primary.main,
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+              >
+                code.consult.digital@gmail.com
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

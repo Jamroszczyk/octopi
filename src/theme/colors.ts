@@ -6,15 +6,15 @@
 export const colors = {
   // Primary Colors
   primary: {
-    main: '#3EDF6E',        // Main purple - used for particles, accents
-    light: '#BBF8CD',       // Light purple - used for buttons
-    lighter: '#E6FFED',     // Very light purple - completion background
+    main: '#B404FD',        // Main purple - used for particles, accents
+    light: '#E095FF',       // Light purple - used for buttons
+    lighter: '#F1CEFF',     // Very light purple - completion background
   },
 
   // Secondary Colors  
   secondary: {
-    green: '#3EDF6E',       // Progress indicator color
-    blue: '#3b82f6',        // Selection color
+    green: '#B404FD',       // Progress indicator color
+    blue: '#B404FD',        // Selection color
   },
 
   // Neutral Colors

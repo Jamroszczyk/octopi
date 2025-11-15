@@ -3,7 +3,7 @@ import { useGraphStore } from '../store/graphStore';
 import { colors } from '../theme/colors';
 
 const Topbar: FC = () => {
-  const { addNode, saveToJSON, loadFromJSON } = useGraphStore();
+  const { addNode, saveToJSON, loadFromJSON, applyAutoLayout } = useGraphStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isImpressumOpen, setIsImpressumOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -97,31 +97,58 @@ const Topbar: FC = () => {
         </h1>
       </div>
 
-      {/* Center: Add Root Task Button */}
-      <button
-        onClick={handleAddRootNode}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: colors.primary.light,
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontWeight: '500',
-          fontSize: '14px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          transition: 'background-color 0.2s',
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.primary.main}
-        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.primary.light}
-      >
-        <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-        Root Task
-      </button>
+      {/* Center: Buttons */}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <button
+          onClick={handleAddRootNode}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: colors.primary.light,
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontWeight: '500',
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'background-color 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.primary.main}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.primary.light}
+        >
+          <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Root Task
+        </button>
+
+        <button
+          onClick={applyAutoLayout}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: colors.neutral.gray100,
+            color: colors.neutral.gray700,
+            border: 'none',
+            borderRadius: '8px',
+            fontWeight: '500',
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'background-color 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray200}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.neutral.gray100}
+        >
+          <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h16M4 12h16M4 19h16" />
+          </svg>
+          Auto Format
+        </button>
+      </div>
 
       {/* Right: Burger Menu */}
       <div style={{ position: 'relative' }} ref={menuRef}>

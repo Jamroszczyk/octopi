@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import type { Node, Edge } from 'reactflow';
 import { colors } from '../theme/colors';
+import { calculateLayout } from '../utils/layoutEngine';
 
 export interface TaskNode extends Node {
   data: {
@@ -21,6 +22,7 @@ interface GraphState {
   toggleNodeCompleted: (nodeId: string) => void;
   deleteNode: (nodeId: string) => void;
   swapNodeSlots: (nodeId: string, targetSlot: number) => void;
+  applyAutoLayout: () => void;
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
   saveToJSON: () => string;
@@ -240,8 +242,6 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     const currentSlot = node.data.slot;
     if (currentSlot === targetSlot) return;
 
-    // Only swap slots at the same level (not descendants)
-    // The layout engine will automatically reposition children relative to parents
     const targetNode = nodes.find(
       n => n.data.level === level && n.data.slot === targetSlot && n.id !== nodeId
     );
@@ -257,6 +257,13 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     });
 
     set({ nodes: updatedNodes });
+  },
+
+  applyAutoLayout: () => {
+    const { nodes, edges } = get();
+    // Use the layout engine to calculate positions
+    const layoutedNodes = calculateLayout(nodes, edges);
+    set({ nodes: layoutedNodes });
   },
 
   pinNode: (nodeId) => {

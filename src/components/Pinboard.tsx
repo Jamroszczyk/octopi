@@ -19,28 +19,6 @@ const Pinboard: FC = () => {
     return null;
   };
 
-  if (pinnedNodes.length === 0) {
-    return (
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '80px',
-        backgroundColor: colors.neutral.gray50,
-        borderTop: `2px solid ${colors.neutral.gray200}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: colors.neutral.gray400,
-        fontSize: '14px',
-        zIndex: 1000,
-      }}>
-        Pin leaf nodes to add them to your pinboard
-      </div>
-    );
-  }
-
   return (
     <div style={{
       position: 'fixed',
@@ -54,13 +32,25 @@ const Pinboard: FC = () => {
       overflowY: 'hidden',
       zIndex: 1000,
       padding: '16px',
+      display: 'flex',
+      alignItems: 'center',
     }}>
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        height: '100%',
-      }}>
-        {pinnedNodes.map(node => (
+      {pinnedNodes.length === 0 ? (
+        <div style={{
+          width: '100%',
+          textAlign: 'center',
+          color: colors.neutral.gray400,
+          fontSize: '14px',
+        }}>
+          Pin leaf nodes to add them to your pinboard
+        </div>
+      ) : (
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          height: '100%',
+        }}>
+          {pinnedNodes.map(node => (
           <div
             key={node.id}
             style={{
@@ -178,8 +168,9 @@ const Pinboard: FC = () => {
               </div>
             </div>
           </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

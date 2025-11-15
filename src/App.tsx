@@ -2,6 +2,7 @@ import { ReactFlowProvider } from 'reactflow';
 import GraphView from './components/GraphView';
 import Topbar from './components/Topbar';
 import Pinboard from './components/Pinboard';
+import Timer from './components/Timer';
 import './App.css';
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
           <GraphView />
         </ReactFlowProvider>
         <Pinboard />
+        <Timer />
       </div>
     </div>
   );

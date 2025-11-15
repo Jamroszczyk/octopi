@@ -116,38 +116,47 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Celebration Particles */}
+      {/* Celebration Particles - FIREWORK BURST 🎆 */}
       {showCelebration && (
         <>
-          {[...Array(12)].map((_, i) => (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: colors.primary.main,
-                pointerEvents: 'none',
-                animation: `particle-${i} 0.8s ease-out forwards`,
-                opacity: 0,
-              }}
-            />
-          ))}
+          {[...Array(32)].map((_, i) => {
+            const size = 4 + Math.random() * 3; // 4-7px random size
+            const duration = 0.5 + Math.random() * 0.2; // 0.5-0.7s
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  borderRadius: '50%',
+                  backgroundColor: colors.primary.main,
+                  pointerEvents: 'none',
+                  animation: `particle-${i} ${duration}s cubic-bezier(0.2, 0.8, 0.2, 1) forwards`,
+                  opacity: 0,
+                  boxShadow: `0 0 ${size * 2}px ${colors.primary.main}`,
+                }}
+              />
+            );
+          })}
           <style>
-            {[...Array(12)].map((_, i) => {
-              const angle = (i * 360) / 12;
-              const distance = 60 + Math.random() * 20;
+            {[...Array(32)].map((_, i) => {
+              const angle = (i * 360) / 32;
+              const distance = 80 + Math.random() * 40; // 80-120px
+              const rotation = Math.random() * 360; // Random rotation
               return `
                 @keyframes particle-${i} {
                   0% {
-                    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+                    transform: translate(-50%, -50%) translate(0, 0) scale(1.2) rotate(0deg);
+                    opacity: 1;
+                  }
+                  70% {
                     opacity: 1;
                   }
                   100% {
-                    transform: translate(-50%, -50%) translate(${Math.cos(angle * Math.PI / 180) * distance}px, ${Math.sin(angle * Math.PI / 180) * distance}px) scale(0);
+                    transform: translate(-50%, -50%) translate(${Math.cos(angle * Math.PI / 180) * distance}px, ${Math.sin(angle * Math.PI / 180) * distance}px) scale(0) rotate(${rotation}deg);
                     opacity: 0;
                   }
                 }

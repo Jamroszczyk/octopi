@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type FC } from 'react';
+import { useCallback, useEffect, type FC } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -11,7 +11,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import EditableNode from './EditableNode';
 import { useGraphStore } from '../store/graphStore';
-import { calculateLayout, getSlotAtPosition } from '../utils/layoutEngine';
 import { colors } from '../theme/colors';
 
 // Move nodeTypes outside component to prevent recreation
@@ -19,11 +18,7 @@ const nodeTypes = { editableNode: EditableNode };
 
 const GraphView: FC = () => {
   const { fitView } = useReactFlow();
-  const { nodes, edges, setNodes, setEdges, swapNodeSlots, deleteNode } = useGraphStore();
-
-  const positionedNodes = useMemo(() => {
-    return calculateLayout(nodes, edges);
-  }, [nodes, edges]);
+  const { nodes, edges, setNodes, setEdges, deleteNode } = useGraphStore();
 
   useEffect(() => {
     if (nodes.length > 0) {
@@ -59,7 +54,20 @@ const GraphView: FC = () => {
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
+      // Handle position changes
+      const positionChanges = changes.filter(change => change.type === 'position');
       const selectChanges = changes.filter(change => change.type === 'select');
+      
+      if (positionChanges.length > 0) {
+        const updatedNodes = nodes.map(node => {
+          const change = positionChanges.find(c => 'id' in c && c.id === node.id);
+          if (change && change.type === 'position' && change.position) {
+            return { ...node, position: change.position };
+          }
+          return node;
+        });
+        setNodes(updatedNodes);
+      }
       
       if (selectChanges.length > 0) {
         const updatedNodes = nodes.map(node => {
@@ -82,20 +90,44 @@ const GraphView: FC = () => {
     [edges, setEdges]
   );
 
-  const onNodeDragStop: NodeDragHandler = useCallback(
-    (_event, node) => {
-      const draggedNode = positionedNodes.find(n => n.id === node.id);
-      if (!draggedNode) return;
+  const onNodeDrag: NodeDragHandler = useCallback(
+    (_event, node, _nodes) => {
+      // Get all descendant IDs
+      const getDescendants = (nodeId: string): string[] => {
+        const childIds = edges.filter(e => e.source === nodeId).map(e => e.target);
+        return [...childIds, ...childIds.flatMap(id => getDescendants(id))];
+      };
 
-      const level = draggedNode.data.level;
-      const currentSlot = draggedNode.data.slot;
-      const targetSlot = getSlotAtPosition(node.position.x, level, positionedNodes);
+      const descendantIds = getDescendants(node.id);
+      
+      // Find the original node to calculate delta
+      const originalNode = nodes.find(n => n.id === node.id);
+      if (!originalNode) return;
 
-      if (targetSlot !== currentSlot) {
-        swapNodeSlots(node.id, targetSlot);
+      const deltaX = node.position.x - originalNode.position.x;
+      const deltaY = node.position.y - originalNode.position.y;
+
+      // Update positions of all descendants
+      if (descendantIds.length > 0 && (deltaX !== 0 || deltaY !== 0)) {
+        const updatedNodes = nodes.map(n => {
+          if (n.id === node.id) {
+            return { ...n, position: node.position };
+          }
+          if (descendantIds.includes(n.id)) {
+            return {
+              ...n,
+              position: {
+                x: n.position.x + deltaX,
+                y: n.position.y + deltaY,
+              },
+            };
+          }
+          return n;
+        });
+        setNodes(updatedNodes);
       }
     },
-    [positionedNodes, swapNodeSlots]
+    [nodes, edges, setNodes]
   );
 
   const onNodeClick = useCallback(() => {}, []);
@@ -103,12 +135,12 @@ const GraphView: FC = () => {
   return (
     <div style={{ width: '100%', height: 'calc(100vh - 64px - 120px)', backgroundColor: colors.neutral.gray50 }}>
       <ReactFlow
-        nodes={positionedNodes}
+        nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeDragStop={onNodeDragStop}
+        onNodeDrag={onNodeDrag}
         onNodeClick={onNodeClick}
         fitView
         fitViewOptions={{ padding: 0.2 }}

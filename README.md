@@ -234,7 +234,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📸 Screenshots
 
-_Add screenshots of your application here_
+![Krakel Application](public/screenshot.png)
 
 ## 🐛 Known Issues
 

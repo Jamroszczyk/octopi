@@ -36,6 +36,7 @@ interface GraphState {
   setBatchTitle: (title: string) => void;
   setDragging: (isDragging: boolean) => void;
   setAutoFormatting: (isAutoFormatting: boolean) => void;
+  deselectAllNodes: () => void; // Deselect all nodes
   saveStateSnapshot: () => void; // Save current state to undo stack
   undo: () => void;
   redo: () => void;
@@ -473,6 +474,13 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setBatchTitle: (title) => {
     get().saveStateSnapshot(); // Save state before action
     set({ batchTitle: title });
+  },
+
+  deselectAllNodes: () => {
+    // Deselect all nodes without creating undo snapshot (this is a UI action, not a data change)
+    set({
+      nodes: get().nodes.map(node => ({ ...node, selected: false })),
+    });
   },
 
   saveToJSON: () => {

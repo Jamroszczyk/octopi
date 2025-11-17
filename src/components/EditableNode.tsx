@@ -12,6 +12,7 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
   const toggleNodeCompleted = useGraphStore(state => state.toggleNodeCompleted);
   const addNode = useGraphStore(state => state.addNode);
   const pinNode = useGraphStore(state => state.pinNode);
+  const deselectAllNodes = useGraphStore(state => state.deselectAllNodes);
   
   // PERFORMANCE FIX: Use selectors to minimize re-renders
   const pinnedNodeIds = useGraphStore(state => state.pinnedNodeIds);
@@ -429,6 +430,10 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
             ref={inputRef}
             value={localLabel}
             onChange={(e) => setLocalLabel(e.target.value)}
+            onFocus={() => {
+              // Deselect any selected nodes when focusing on text input
+              deselectAllNodes();
+            }}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             style={{

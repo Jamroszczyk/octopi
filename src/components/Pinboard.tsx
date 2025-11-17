@@ -17,6 +17,7 @@ const Pinboard: FC = () => {
     reorderPinnedNodes,
     toggleAllPinnedCompleted,
     setBatchTitle,
+    deselectAllNodes,
   } = useGraphStore();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -164,6 +165,10 @@ const Pinboard: FC = () => {
                 type="text"
                 value={localBatchTitle}
                 onChange={(e) => setLocalBatchTitle(e.target.value)}
+                onFocus={() => {
+                  // Deselect any selected nodes when focusing on text input
+                  deselectAllNodes();
+                }}
                 onBlur={() => {
                   setIsEditingTitle(false);
                   // Only save to store (and create undo snapshot) when editing is done

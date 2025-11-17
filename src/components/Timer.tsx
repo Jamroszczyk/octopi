@@ -35,10 +35,12 @@ const Timer: FC = () => {
     const timerWidth = isMinimized ? 180 : 210;
     const timerHeight = isMinimized ? 56 : 280; // Minimized: compact bar, Full: Circle + controls
     const margin = 20; // Minimum margin from edges
+    const TOPBAR_HEIGHT = 64; // Topbar height
     
     const minX = timerWidth / 2 + margin;
     const maxX = window.innerWidth - timerWidth / 2 - margin;
-    const minY = timerHeight / 2 + margin;
+    // Don't allow timer above topbar or below pinboard
+    const minY = TOPBAR_HEIGHT + timerHeight / 2 + margin;
     const maxY = window.innerHeight - PINBOARD_HEIGHT - timerHeight / 2 - margin;
     
     return {

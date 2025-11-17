@@ -62,7 +62,7 @@ A beautiful, interactive node-based task management application for organizing y
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/krakel.git
+   git clone https://github.com/Jamroszczyk/krakel
    cd krakel
    ```
 
@@ -223,7 +223,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Johannes Jamroszczyk**
 
-- GitHub: [@yourusername](https://github.com/yourusername)
+- GitHub: [@Jamroszczyk](https://github.com/Jamroszczyk)
 - Email: code.consult.digital@gmail.com
 
 ## 🙏 Acknowledgments

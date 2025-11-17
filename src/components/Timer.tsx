@@ -9,7 +9,7 @@ const Timer: FC = () => {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true); // Start minimized by default
   const intervalRef = useRef<number | null>(null);
   
   // Draggable state
@@ -19,12 +19,17 @@ const Timer: FC = () => {
   const [hasDragged, setHasDragged] = useState(false);
   const timerRef = useRef<HTMLDivElement>(null);
 
-  // Initialize position to center-bottom on mount
+  // Initialize position to top-left on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const TOPBAR_HEIGHT = 64;
+      const margin = 20;
+      const timerWidth = 180; // Minimized width
+      const timerHeight = 56; // Minimized height
+      
       setPosition({
-        x: window.innerWidth / 2,
-        y: window.innerHeight - PINBOARD_HEIGHT - 140, // Pinboard height + 140px default position
+        x: timerWidth / 2 + margin, // Left edge with margin
+        y: TOPBAR_HEIGHT + timerHeight / 2 + margin, // Below topbar with margin
       });
     }
   }, []);

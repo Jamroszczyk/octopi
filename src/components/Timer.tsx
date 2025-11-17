@@ -1,5 +1,6 @@
-import { type FC, useState, useEffect, useRef } from 'react';
+import { type FC, useState, useEffect, useRef, useCallback } from 'react';
 import { colors } from '../theme/colors';
+import { PINBOARD_HEIGHT } from './Pinboard';
 
 const Timer: FC = () => {
   const [minutes, setMinutes] = useState(25);
@@ -8,6 +9,7 @@ const Timer: FC = () => {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const intervalRef = useRef<number | null>(null);
   
   // Draggable state
@@ -22,10 +24,43 @@ const Timer: FC = () => {
     if (typeof window !== 'undefined') {
       setPosition({
         x: window.innerWidth / 2,
-        y: window.innerHeight - 260, // 120px pinboard + 140px default position
+        y: window.innerHeight - PINBOARD_HEIGHT - 140, // Pinboard height + 140px default position
       });
     }
   }, []);
+
+  // Constrain position within viewport bounds
+  const constrainPosition = useCallback((pos: { x: number; y: number }) => {
+    // Different sizes for minimized vs full timer
+    const timerWidth = isMinimized ? 180 : 210;
+    const timerHeight = isMinimized ? 56 : 280; // Minimized: compact bar, Full: Circle + controls
+    const margin = 20; // Minimum margin from edges
+    
+    const minX = timerWidth / 2 + margin;
+    const maxX = window.innerWidth - timerWidth / 2 - margin;
+    const minY = timerHeight / 2 + margin;
+    const maxY = window.innerHeight - PINBOARD_HEIGHT - timerHeight / 2 - margin;
+    
+    return {
+      x: Math.max(minX, Math.min(maxX, pos.x)),
+      y: Math.max(minY, Math.min(maxY, pos.y)),
+    };
+  }, [isMinimized]);
+
+  // Handle window resize to keep timer in bounds
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition((prevPos) => constrainPosition(prevPos));
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [constrainPosition]);
+
+  // Adjust position when toggling minimize state to ensure it stays in bounds
+  useEffect(() => {
+    setPosition((prevPos) => constrainPosition(prevPos));
+  }, [isMinimized, constrainPosition]);
 
   const totalSeconds = minutes * 60 + seconds;
 
@@ -94,7 +129,7 @@ const Timer: FC = () => {
   };
 
   const handleEdit = () => {
-    // Don't activate edit mode if we just finished dragging
+    // Don't activate edit mode if we just finished dragging or if timer is running
     if (!isRunning && !hasDragged) {
       setIsEditing(true);
     }
@@ -143,10 +178,11 @@ const Timer: FC = () => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
         setHasDragged(true); // Mark that we've moved during this drag
-        setPosition({
+        const newPos = {
           x: e.clientX - dragStart.x,
           y: e.clientY - dragStart.y,
-        });
+        };
+        setPosition(constrainPosition(newPos));
       }
     };
 
@@ -165,7 +201,7 @@ const Timer: FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragStart]);
+  }, [isDragging, dragStart, constrainPosition]);
 
   // No useEffect needed - we'll use a backdrop approach instead
 
@@ -177,6 +213,103 @@ const Timer: FC = () => {
   const radius = 80; // Increased from 70
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - progress);
+
+  // Minimized view
+  if (isMinimized) {
+    return (
+      <div
+        ref={timerRef}
+        onMouseDown={handleMouseDown}
+        onClick={() => {
+          if (!hasDragged) {
+            setIsMinimized(false);
+          }
+        }}
+        style={{
+          position: 'fixed',
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          transform: 'translate(-50%, -50%)',
+          zIndex: 1001,
+          cursor: isDragging ? 'grabbing' : 'pointer',
+          userSelect: 'none',
+        }}
+      >
+        <div style={{
+          backgroundColor: colors.neutral.white,
+          borderRadius: '24px',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+          padding: '12px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          border: `2px solid ${colors.neutral.gray200}`,
+          minWidth: '140px',
+        }}>
+          {/* Running indicator */}
+          <div style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: isRunning ? colors.primary.main : colors.neutral.gray400,
+            flexShrink: 0,
+          }} />
+          
+          {/* Time display */}
+          <div style={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: colors.neutral.gray800,
+            fontVariantNumeric: 'tabular-nums',
+            flex: 1,
+            textAlign: 'center',
+          }}>
+            {displayMinutes.toString().padStart(2, '0')}:{displaySeconds.toString().padStart(2, '0')}
+          </div>
+
+          {/* Progress bar */}
+          <div style={{
+            width: '32px',
+            height: '32px',
+            position: 'relative',
+            flexShrink: 0,
+          }}>
+            <svg
+              style={{
+                transform: 'rotate(-90deg)',
+                width: '100%',
+                height: '100%',
+              }}
+              viewBox="0 0 32 32"
+            >
+              <circle
+                cx="16"
+                cy="16"
+                r="14"
+                fill="none"
+                stroke={colors.neutral.gray100}
+                strokeWidth="3"
+              />
+              <circle
+                cx="16"
+                cy="16"
+                r="14"
+                fill="none"
+                stroke={colors.primary.main}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 14}
+                strokeDashoffset={2 * Math.PI * 14 * (1 - progress)}
+                style={{
+                  transition: isRunning ? 'stroke-dashoffset 1s linear' : 'none',
+                }}
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -229,6 +362,40 @@ const Timer: FC = () => {
           position: 'relative',
         }}
       >
+      {/* Minimize button */}
+      <button
+        onClick={() => setIsMinimized(true)}
+        style={{
+          position: 'absolute',
+          top: '16px',
+          right: '16px',
+          width: '28px',
+          height: '28px',
+          borderRadius: '50%',
+          border: `2px solid ${colors.neutral.gray400}`,
+          backgroundColor: colors.neutral.gray100,
+          color: colors.neutral.gray700,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          zIndex: 10,
+          transition: 'all 0.2s',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = colors.neutral.gray200;
+          e.currentTarget.style.borderColor = colors.neutral.gray600;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = colors.neutral.gray100;
+          e.currentTarget.style.borderColor = colors.neutral.gray400;
+        }}
+        title="Minimize"
+      >
+        −
+      </button>
       {/* Circular Progress */}
       <svg
         style={{
@@ -377,54 +544,80 @@ const Timer: FC = () => {
           </button>
         ) : (
           <>
-            <button
-              onClick={timeLeft === originalTotalSeconds ? handleStart : handleResume}
-              disabled={totalSeconds === 0 || timeLeft === 0}
-              style={{
-                padding: '10px 24px',
-                backgroundColor: (totalSeconds === 0 || timeLeft === 0) ? colors.neutral.gray400 : colors.primary.light,
-                color: colors.neutral.white,
-                border: 'none',
-                borderRadius: '24px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: (totalSeconds === 0 || timeLeft === 0) ? 'not-allowed' : 'pointer',
-                transition: 'background-color 0.2s',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              }}
-              onMouseEnter={(e) => {
-                if (totalSeconds > 0 && timeLeft > 0) {
-                  e.currentTarget.style.backgroundColor = colors.primary.main;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (totalSeconds > 0 && timeLeft > 0) {
-                  e.currentTarget.style.backgroundColor = colors.primary.light;
-                }
-              }}
-            >
-              {timeLeft === originalTotalSeconds ? 'Start' : 'Resume'}
-            </button>
-            {timeLeft !== originalTotalSeconds && timeLeft > 0 && (
+            {timeLeft === 0 ? (
+              // Timer has finished - show reset button
               <button
                 onClick={handleReset}
                 style={{
-                  padding: '10px 20px',
-                  backgroundColor: colors.neutral.gray100,
-                  color: colors.neutral.gray700,
+                  padding: '10px 24px',
+                  backgroundColor: colors.primary.light,
+                  color: colors.neutral.white,
                   border: 'none',
                   borderRadius: '24px',
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'background-color 0.2s',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.neutral.gray200)}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = colors.neutral.gray100)}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.primary.main)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = colors.primary.light)}
               >
                 Reset
               </button>
+            ) : (
+              // Timer is paused or ready to start
+              <>
+                <button
+                  onClick={timeLeft === originalTotalSeconds ? handleStart : handleResume}
+                  disabled={totalSeconds === 0}
+                  style={{
+                    padding: '10px 24px',
+                    backgroundColor: totalSeconds === 0 ? colors.neutral.gray400 : colors.primary.light,
+                    color: colors.neutral.white,
+                    border: 'none',
+                    borderRadius: '24px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: totalSeconds === 0 ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 0.2s',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (totalSeconds > 0) {
+                      e.currentTarget.style.backgroundColor = colors.primary.main;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (totalSeconds > 0) {
+                      e.currentTarget.style.backgroundColor = colors.primary.light;
+                    }
+                  }}
+                >
+                  {timeLeft === originalTotalSeconds ? 'Start' : 'Resume'}
+                </button>
+                {timeLeft !== originalTotalSeconds && (
+                  <button
+                    onClick={handleReset}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: colors.neutral.gray100,
+                      color: colors.neutral.gray700,
+                      border: 'none',
+                      borderRadius: '24px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.neutral.gray200)}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = colors.neutral.gray100)}
+                  >
+                    Reset
+                  </button>
+                )}
+              </>
             )}
           </>
         )}

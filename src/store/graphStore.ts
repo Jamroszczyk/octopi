@@ -17,6 +17,7 @@ interface GraphState {
   nodes: TaskNode[];
   edges: Edge[];
   pinnedNodeIds: string[];
+  batchTitle: string;
   addNode: (parentId?: string, level?: 0 | 1 | 2) => void;
   updateNodeLabel: (nodeId: string, label: string) => void;
   toggleNodeCompleted: (nodeId: string) => void;
@@ -25,6 +26,10 @@ interface GraphState {
   applyAutoLayout: () => void;
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
+  unpinAll: () => void;
+  reorderPinnedNodes: (fromIndex: number, toIndex: number) => void;
+  toggleAllPinnedCompleted: () => void;
+  setBatchTitle: (title: string) => void;
   saveToJSON: () => string;
   loadFromJSON: (json: string) => void;
   setNodes: (nodes: TaskNode[]) => void;
@@ -143,11 +148,14 @@ const createInitialGraph = () => {
 };
 
 const { nodes: initialNodes, edges: initialEdges } = createInitialGraph();
+// Apply initial layout
+const layoutedInitialNodes = calculateLayout(initialNodes, initialEdges);
 
 export const useGraphStore = create<GraphState>((set, get) => ({
-  nodes: initialNodes,
+  nodes: layoutedInitialNodes,
   edges: initialEdges,
   pinnedNodeIds: [],
+  batchTitle: 'Current Batch',
 
   addNode: (parentId, level = 0) => {
     const nodes = get().nodes;
@@ -190,7 +198,9 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       });
     }
 
-    set({ nodes: newNodes, edges: newEdges });
+    // Apply auto layout after adding node so it appears in the correct position
+    const layoutedNodes = calculateLayout(newNodes, newEdges);
+    set({ nodes: layoutedNodes, edges: newEdges });
   },
 
   updateNodeLabel: (nodeId, label) => {
@@ -261,8 +271,37 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
   applyAutoLayout: () => {
     const { nodes, edges } = get();
-    // Use the layout engine to calculate positions
-    const layoutedNodes = calculateLayout(nodes, edges);
+    
+    // First, update slots based on current X positions to respect manual reordering
+    // Group nodes by level
+    const nodesByLevel: { [level: number]: TaskNode[] } = {};
+    nodes.forEach(node => {
+      const level = node.data.level;
+      if (!nodesByLevel[level]) {
+        nodesByLevel[level] = [];
+      }
+      nodesByLevel[level].push(node);
+    });
+    
+    // For each level, sort by X position and update slots
+    const nodesWithUpdatedSlots = nodes.map(node => {
+      const nodesAtLevel = nodesByLevel[node.data.level];
+      // Sort by current X position (left to right)
+      const sortedByPosition = [...nodesAtLevel].sort((a, b) => a.position.x - b.position.x);
+      // Find this node's new slot based on its position
+      const newSlot = sortedByPosition.findIndex(n => n.id === node.id);
+      
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          slot: newSlot >= 0 ? newSlot : node.data.slot,
+        },
+      };
+    });
+    
+    // Now apply the layout with updated slots
+    const layoutedNodes = calculateLayout(nodesWithUpdatedSlots, edges);
     set({ nodes: layoutedNodes });
   },
 
@@ -277,15 +316,46 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     set({ pinnedNodeIds: get().pinnedNodeIds.filter(id => id !== nodeId) });
   },
 
+  unpinAll: () => {
+    set({ pinnedNodeIds: [] });
+  },
+
+  reorderPinnedNodes: (fromIndex, toIndex) => {
+    const pinnedNodeIds = [...get().pinnedNodeIds];
+    const [movedId] = pinnedNodeIds.splice(fromIndex, 1);
+    pinnedNodeIds.splice(toIndex, 0, movedId);
+    set({ pinnedNodeIds });
+  },
+
+  toggleAllPinnedCompleted: () => {
+    const { nodes, pinnedNodeIds } = get();
+    const pinnedNodes = nodes.filter(n => pinnedNodeIds.includes(n.id));
+    
+    // If all are completed, uncomplete all. Otherwise, complete all.
+    const allCompleted = pinnedNodes.every(n => n.data.completed);
+    
+    set({
+      nodes: nodes.map(node =>
+        pinnedNodeIds.includes(node.id)
+          ? { ...node, data: { ...node.data, completed: !allCompleted } }
+          : node
+      ),
+    });
+  },
+
+  setBatchTitle: (title) => {
+    set({ batchTitle: title });
+  },
+
   saveToJSON: () => {
-    const { nodes, edges, pinnedNodeIds } = get();
-    return JSON.stringify({ nodes, edges, pinnedNodeIds }, null, 2);
+    const { nodes, edges, pinnedNodeIds, batchTitle } = get();
+    return JSON.stringify({ nodes, edges, pinnedNodeIds, batchTitle }, null, 2);
   },
 
   loadFromJSON: (json) => {
     try {
-      const { nodes, edges, pinnedNodeIds = [] } = JSON.parse(json);
-      set({ nodes, edges, pinnedNodeIds });
+      const { nodes, edges, pinnedNodeIds = [], batchTitle = 'Current Batch' } = JSON.parse(json);
+      set({ nodes, edges, pinnedNodeIds, batchTitle });
     } catch (error) {
       console.error('Failed to load JSON:', error);
     }

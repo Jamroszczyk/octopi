@@ -79,7 +79,13 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
     pinNode(id);
   };
 
-  const isCompleted = hasChildren && progress === 1;
+  const handleButtonMouseDown = (e: React.MouseEvent) => {
+    // Prevent drag from starting when clicking buttons
+    e.stopPropagation();
+  };
+
+  // Node is completed if it's a parent with 100% progress OR a leaf node that's checked
+  const isCompleted = (hasChildren && progress === 1) || (!hasChildren && data.completed);
 
   const nodeStyle: React.CSSProperties = {
     padding: !hasChildren ? '12px 32px 12px 16px' : '12px 16px', // Extra padding right for leaf nodes (for pin button)
@@ -94,21 +100,42 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
 
   const canHaveChildren = data.level < 2;
   
-  // For progress border animation
-  const [animatedProgress, setAnimatedProgress] = useState(progress);
+  // For progress border animation and celebration
+  const [animatedProgress, setAnimatedProgress] = useState(() => {
+    // Initialize progress: 1 for completed leaf nodes, otherwise use calculated progress
+    return (!hasChildren && data.completed) ? 1 : progress;
+  });
   const [showCelebration, setShowCelebration] = useState(false);
   const [prevProgress, setPrevProgress] = useState(progress);
+  const [prevCompleted, setPrevCompleted] = useState(data.completed);
   
   useEffect(() => {
-    setAnimatedProgress(progress);
-    
-    // Trigger celebration when reaching 100%
-    if (progress === 1 && prevProgress < 1 && hasChildren) {
+    // Only update animated progress for parent nodes (hasChildren)
+    if (hasChildren) {
+      setAnimatedProgress(progress);
+      
+      // Trigger celebration when parent node reaches 100%
+      if (progress === 1 && prevProgress < 1) {
+        setShowCelebration(true);
+        setTimeout(() => setShowCelebration(false), 1000);
+      }
+      setPrevProgress(progress);
+    }
+  }, [progress, prevProgress, hasChildren]);
+
+  // Trigger celebration when leaf node is checked
+  useEffect(() => {
+    if (!hasChildren && data.completed && !prevCompleted) {
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 1000);
+      // Animate progress from 0 to 1 for leaf nodes
+      setAnimatedProgress(1);
+    } else if (!hasChildren && !data.completed) {
+      // Reset progress when unchecked
+      setAnimatedProgress(0);
     }
-    setPrevProgress(progress);
-  }, [progress, prevProgress, hasChildren]);
+    setPrevCompleted(data.completed);
+  }, [data.completed, prevCompleted, hasChildren]);
 
   return (
     <div
@@ -166,11 +193,43 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
         </>
       )}
 
+      {/* Selection outline overlay for parent nodes */}
+      {selected && hasChildren && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-4px',
+            left: '-4px',
+            right: '-4px',
+            bottom: '-4px',
+            border: `2px solid ${colors.secondary.blue}`,
+            borderRadius: '16px',
+            pointerEvents: 'none',
+            zIndex: 5,
+            opacity: 1,
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        />
+      )}
+
+      <style>
+        {`
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
+
       <div
         style={{
           ...nodeStyle,
           position: 'relative',
-          border: hasChildren 
+          border: hasChildren || (!hasChildren && data.completed)
             ? `3px solid ${colors.neutral.gray200}`
             : selected ? `2px solid ${colors.secondary.blue}` : `2px solid ${colors.neutral.gray200}`,
         }}
@@ -193,6 +252,7 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
       {!hasChildren && !isPinned && (
         <button
           onClick={handlePinToggle}
+          onMouseDown={handleButtonMouseDown}
           style={{
             position: 'absolute',
             top: '6px',
@@ -245,6 +305,7 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
         {!hasChildren && (
           <button
             onClick={handleToggleComplete}
+            onMouseDown={handleButtonMouseDown}
             style={{
               width: '20px',
               height: '20px',
@@ -327,8 +388,8 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
         )}
       </div>
 
-      {/* SVG Progress Border Overlay */}
-      {hasChildren && (
+      {/* SVG Progress Border Overlay - for parent nodes and completed leaf nodes */}
+      {(hasChildren || (!hasChildren && data.completed)) && (
         <svg
           style={{
             position: 'absolute',
@@ -369,6 +430,7 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
       {canHaveChildren && (
         <button
           onClick={handleAddChild}
+          onMouseDown={handleButtonMouseDown}
           style={{
             position: 'absolute',
             bottom: '-12px',

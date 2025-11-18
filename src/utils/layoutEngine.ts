@@ -1,8 +1,8 @@
 import type { TaskNode } from '../store/graphStore';
 import type { Edge } from 'reactflow';
 
-const LEVEL_SPACING = 220;
-const NODE_SPACING = 100;
+const LEVEL_SPACING = 340; // Horizontal spacing between levels (left to right) - increased for better separation
+const NODE_SPACING = 20; // Vertical spacing between sibling nodes (top to bottom) - reduced for tighter vertical grouping
 const MIN_NODE_WIDTH = 120;
 const MAX_NODE_WIDTH = 300;
 const PADDING = 32; // 16px left + 16px right padding
@@ -33,16 +33,17 @@ function estimateNodeWidth(node: TaskNode): number {
 }
 
 /**
- * Calculate the total width needed for a node and all its descendants
+ * Calculate the total height needed for a node and all its descendants
+ * (height = vertical space for siblings in horizontal layout)
  */
-function calculateSubtreeWidth(
+function calculateSubtreeHeight(
   nodeId: string,
   nodes: TaskNode[],
   edges: Edge[],
   nodeSpacing: number
 ): number {
   const node = nodes.find(n => n.id === nodeId);
-  if (!node) return MIN_NODE_WIDTH;
+  if (!node) return 100; // Default node height
 
   const children = edges
     .filter(e => e.source === nodeId)
@@ -51,30 +52,37 @@ function calculateSubtreeWidth(
     .filter(Boolean) as TaskNode[];
 
   if (children.length === 0) {
-    // Leaf node - use estimated width based on text
-    return estimateNodeWidth(node);
+    // Leaf node - use estimated height based on text (approximate)
+    const text = node.data.label || '';
+    const lines = text.split('\n');
+    const lineHeight = 24; // Approximate line height
+    const minHeight = 60; // Minimum node height
+    return Math.max(minHeight, lines.length * lineHeight + 40);
   }
 
-  // Calculate total width needed for all children and their subtrees
-  const childrenWidths = children.map(child => 
-    calculateSubtreeWidth(child.id, nodes, edges, nodeSpacing)
+  // Calculate total height needed for all children and their subtrees
+  const childrenHeights = children.map(child => 
+    calculateSubtreeHeight(child.id, nodes, edges, nodeSpacing)
   );
   
-  const totalChildrenWidth = childrenWidths.reduce((sum, w) => sum + w, 0) + 
+  const totalChildrenHeight = childrenHeights.reduce((sum, h) => sum + h, 0) + 
     (children.length - 1) * nodeSpacing;
 
-  // Parent node should be at least as wide as its own text, or as wide as its children
-  const nodeWidth = estimateNodeWidth(node);
-  return Math.max(nodeWidth, totalChildrenWidth);
+  // Parent node should be at least as tall as its own content, or as tall as its children
+  const text = node.data.label || '';
+  const lines = text.split('\n');
+  const lineHeight = 24;
+  const nodeHeight = Math.max(60, lines.length * lineHeight + 40);
+  return Math.max(nodeHeight, totalChildrenHeight);
 }
 
 /**
- * Position a node and its descendants recursively
+ * Position a node and its descendants recursively (horizontal layout: left to right)
  */
 function positionSubtree(
   nodeId: string,
-  centerX: number,
-  y: number,
+  x: number,
+  centerY: number,
   nodes: TaskNode[],
   edges: Edge[],
   positioned: Map<string, TaskNode>,
@@ -84,8 +92,8 @@ function positionSubtree(
   const node = nodes.find(n => n.id === nodeId);
   if (!node || positioned.has(nodeId)) return;
 
-  // Position this node at the given center
-  positioned.set(nodeId, { ...node, position: { x: centerX, y } });
+  // Position this node at the given position
+  positioned.set(nodeId, { ...node, position: { x, y: centerY } });
 
   // Get children
   const children = edges
@@ -99,26 +107,27 @@ function positionSubtree(
   // Sort children by slot
   children.sort((a, b) => a.data.slot - b.data.slot);
 
-  // Calculate width for each child subtree
-  const childWidths = children.map(child => 
-    calculateSubtreeWidth(child.id, nodes, edges, nodeSpacing)
+  // Calculate height for each child subtree (vertical space for siblings)
+  const childHeights = children.map(child => 
+    calculateSubtreeHeight(child.id, nodes, edges, nodeSpacing)
   );
 
-  // Calculate total width needed
-  const totalWidth = childWidths.reduce((sum, w) => sum + w, 0) + 
+  // Calculate total height needed
+  const totalHeight = childHeights.reduce((sum, h) => sum + h, 0) + 
     (children.length - 1) * nodeSpacing;
 
-  // Start positioning children from left to right
-  let currentX = centerX - totalWidth / 2;
+  // Start positioning children from top to bottom (vertically)
+  let currentY = centerY - totalHeight / 2;
 
   children.forEach((child, i) => {
-    const childWidth = childWidths[i];
-    const childCenterX = currentX + childWidth / 2;
+    const childHeight = childHeights[i];
+    const childCenterY = currentY + childHeight / 2;
     
+    // Position children to the right of parent (x + levelSpacing)
     positionSubtree(
       child.id,
-      childCenterX,
-      y + levelSpacing,
+      x + levelSpacing,
+      childCenterY,
       nodes,
       edges,
       positioned,
@@ -126,12 +135,12 @@ function positionSubtree(
       nodeSpacing
     );
 
-    currentX += childWidth + nodeSpacing;
+    currentY += childHeight + nodeSpacing;
   });
 }
 
 /**
- * Calculate positions for all nodes based on hierarchy
+ * Calculate positions for all nodes based on hierarchy (horizontal layout: left to right)
  */
 export function calculateLayout(
   nodes: TaskNode[],
@@ -152,26 +161,27 @@ export function calculateLayout(
     return nodes;
   }
 
-  // Calculate width for each root subtree
-  const rootWidths = rootNodes.map(root => 
-    calculateSubtreeWidth(root.id, nodes, edges, nodeSpacing)
+  // Calculate height for each root subtree (vertical space for siblings)
+  const rootHeights = rootNodes.map(root => 
+    calculateSubtreeHeight(root.id, nodes, edges, nodeSpacing)
   );
 
-  // Calculate total width needed for all roots
-  const totalWidth = rootWidths.reduce((sum, w) => sum + w, 0) + 
+  // Calculate total height needed for all roots
+  const totalHeight = rootHeights.reduce((sum, h) => sum + h, 0) + 
     (rootNodes.length - 1) * nodeSpacing * 2; // Extra spacing between root trees
 
-  // Position each root and its subtree
-  let currentX = -totalWidth / 2;
+  // Position each root and its subtree (vertically stacked, starting from top)
+  let currentY = -totalHeight / 2;
 
   rootNodes.forEach((root, i) => {
-    const rootWidth = rootWidths[i];
-    const rootCenterX = currentX + rootWidth / 2;
+    const rootHeight = rootHeights[i];
+    const rootCenterY = currentY + rootHeight / 2;
     
+    // Root nodes start at x = 0, children go to the right
     positionSubtree(
       root.id,
-      rootCenterX,
       0,
+      rootCenterY,
       nodes,
       edges,
       positioned,
@@ -179,7 +189,7 @@ export function calculateLayout(
       nodeSpacing
     );
 
-    currentX += rootWidth + nodeSpacing * 2;
+    currentY += rootHeight + nodeSpacing * 2;
   });
 
   // Return all positioned nodes (preserve any unpositioned nodes with original position)
@@ -187,10 +197,11 @@ export function calculateLayout(
 }
 
 /**
- * Find the slot index at a given x position for nodes at a specific level
+ * Find the slot index at a given y position for nodes at a specific level
+ * (In horizontal layout, siblings are stacked vertically, so we use Y position)
  */
 export function getSlotAtPosition(
-  x: number,
+  y: number,
   level: number,
   nodes: TaskNode[]
 ): number {
@@ -199,13 +210,13 @@ export function getSlotAtPosition(
 
   if (nodesAtLevel.length === 0) return 0;
 
-  // Find closest slot based on current positions
+  // Find closest slot based on current Y positions (vertical stacking)
   let closestSlot = 0;
   let minDistance = Infinity;
 
   for (let i = 0; i < nodesAtLevel.length; i++) {
     const node = nodesAtLevel[i];
-    const distance = Math.abs(x - node.position.x);
+    const distance = Math.abs(y - node.position.y);
     
     if (distance < minDistance) {
       minDistance = distance;

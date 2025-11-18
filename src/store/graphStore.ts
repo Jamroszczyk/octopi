@@ -403,11 +403,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       nodesByLevel[level].push(node);
     });
     
-    // For each level, sort by X position and update slots
+    // For each level, sort by Y position and update slots (siblings are stacked vertically in horizontal layout)
     const nodesWithUpdatedSlots = nodes.map(node => {
       const nodesAtLevel = nodesByLevel[node.data.level];
-      // Sort by current X position (left to right)
-      const sortedByPosition = [...nodesAtLevel].sort((a, b) => a.position.x - b.position.x);
+      // Sort by current Y position (top to bottom for siblings)
+      const sortedByPosition = [...nodesAtLevel].sort((a, b) => a.position.y - b.position.y);
       // Find this node's new slot based on its position
       const newSlot = sortedByPosition.findIndex(n => n.id === node.id);
       

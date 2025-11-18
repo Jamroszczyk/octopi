@@ -336,10 +336,11 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
         }}
       >
       {/* Invisible handles for edges - required by ReactFlow */}
+      {/* Target handle on left (incoming edges from parent) */}
       {data.level > 0 && (
         <Handle 
           type="target" 
-          position={Position.Top} 
+          position={Position.Left} 
           style={{ 
             opacity: 0,
             pointerEvents: 'none',
@@ -489,10 +490,11 @@ const EditableNode: FC<NodeProps> = ({ id, data, selected }) => {
       </div>
 
         {/* Invisible handles for edges - required by ReactFlow */}
+        {/* Source handle on right (outgoing edges to children) */}
         {data.level < 2 && (
           <Handle 
             type="source" 
-            position={Position.Bottom} 
+            position={Position.Right} 
             style={{ 
               opacity: 0,
               pointerEvents: 'none',

@@ -11,6 +11,12 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
+      
+      // Set default consent to denied (will be updated by CookieConsent component)
+      gtag('consent', 'default', {
+        'analytics_storage': 'denied'
+      });
+      
       gtag('config', 'G-Z33NYVMSE0');
     </script>
     

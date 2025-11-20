@@ -75,7 +75,7 @@ const nodeTypes = { editableNode: EditableNode };
 
 const GraphView: FC = () => {
   const { fitView } = useReactFlow();
-  const { nodes: storeNodes, edges: storeEdges, setNodes: setStoreNodes, setEdges: setStoreEdges, deleteNodes, setDragging, isAutoFormatting, editingNodeId, saveStateSnapshot, nodeToCure, setNodeToCure } = useGraphStore();
+  const { nodes: storeNodes, edges: storeEdges, setNodes: setStoreNodes, setEdges: setStoreEdges, deleteNodes, addNode, setDragging, isAutoFormatting, editingNodeId, saveStateSnapshot, nodeToCure, setNodeToCure } = useGraphStore();
   
   // CRITICAL: Use React Flow's optimized hooks for smooth rendering
   const [nodes, setNodes, onNodesChange] = useNodesState(storeNodes);
@@ -176,11 +176,11 @@ const GraphView: FC = () => {
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if we're editing a node (textarea is focused)
+      const isEditingNode = document.activeElement?.tagName === 'TEXTAREA';
+      
       // Delete selected node on Backspace or Delete
       if (event.key === 'Backspace' || event.key === 'Delete') {
-        // Check if we're editing a node (textarea is focused)
-        const isEditingNode = document.activeElement?.tagName === 'TEXTAREA';
-        
         // Only handle deletion if we're NOT editing
         if (!isEditingNode) {
           const selectedNodes = nodes.filter(n => n.selected);
@@ -211,11 +211,30 @@ const GraphView: FC = () => {
           }
         }
       }
+      
+      // Create child node on Enter (only if node is selected but not editing)
+      if (event.key === 'Enter' && !event.shiftKey) {
+        // Only handle if we're NOT editing (Enter should work normally in textarea)
+        if (!isEditingNode) {
+          const selectedNodes = nodes.filter(n => n.selected);
+          // Only create child if exactly one node is selected
+          if (selectedNodes.length === 1) {
+            const selectedNode = selectedNodes[0];
+            // Only create child if node can have children (level < 2)
+            if (selectedNode.data.level < 2) {
+              event.preventDefault();
+              event.stopPropagation();
+              const childLevel = (selectedNode.data.level + 1) as 1 | 2;
+              addNode(selectedNode.id, childLevel);
+            }
+          }
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown, true); // Use capture phase
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [nodes, getDescendants]);
+  }, [nodes, getDescendants, addNode]);
 
   // CRITICAL: onNodeDragStart - capture initial positions of parent and all children
   const onNodeDragStart: NodeDragHandler = useCallback((_event, node) => {
